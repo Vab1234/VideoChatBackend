@@ -3,7 +3,7 @@ const http = require("http");
 
 const server = http.createServer();
 
-const io = new Server(8000, {
+const io = new Server(server, {
   cors: true,
 });
 
@@ -41,6 +41,6 @@ io.on("connection", (socket) => {
 });
 
 
-server.listen(8000, "0.0.0.0", () => {
+server.listen(3000, "0.0.0.0", () => {
   console.log("Server listening on port 8000");
 });
