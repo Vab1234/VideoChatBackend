@@ -1,7 +1,8 @@
 const { Server } = require("socket.io");
 require("dotenv").config();
 const http = require("http");
-const dynamoDB = require("./aws-config"); // <- import DynamoDB client
+const { PutCommand } = require("@aws-sdk/lib-dynamodb");
+const { dynamo } = require("./aws-config"); // Correctly imported DynamoDBDocumentClient
 
 const server = http.createServer();
 
@@ -24,17 +25,17 @@ io.on("connection", (socket) => {
 
     // Save user to DynamoDB
     try {
-      const params = {
-        TableName: "Users", // Make sure this matches your DynamoDB table name
+      const params = new PutCommand({
+        TableName: "Users", // Update if your DynamoDB table name is different
         Item: {
           email,
           room,
           socketId: socket.id,
           joinedAt: new Date().toISOString(),
         },
-      };
+      });
 
-      await dynamoDB.put(params).promise();
+      await dynamo.send(params);
       console.log("User saved to DynamoDB");
     } catch (err) {
       console.error("Error saving user to DynamoDB:", err);
