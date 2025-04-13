@@ -1,5 +1,5 @@
-const { Server } = require("socket.io");
 require("dotenv").config();
+const { Server } = require("socket.io");
 const http = require("http");
 const { PutCommand } = require("@aws-sdk/lib-dynamodb");
 const { dynamo } = require("./aws-config"); // Correctly imported DynamoDBDocumentClient
