@@ -1,5 +1,7 @@
 const { Server } = require("socket.io");
+require("dotenv").config();
 const http = require("http");
+const dynamoDB = require("./aws-config"); // <- import DynamoDB client
 
 const server = http.createServer();
 
@@ -12,12 +14,34 @@ const socketidToEmailMap = new Map();
 
 io.on("connection", (socket) => {
   console.log(`Socket Connected`, socket.id);
-  socket.on("room:join", (data) => {
+
+  socket.on("room:join", async (data) => {
     const { email, room } = data;
+
     emailToSocketIdMap.set(email, socket.id);
     socketidToEmailMap.set(socket.id, email);
-    io.to(room).emit("user:joined", { email, id: socket.id });
     socket.join(room);
+
+    // Save user to DynamoDB
+    try {
+      const params = {
+        TableName: "Users", // Make sure this matches your DynamoDB table name
+        Item: {
+          email,
+          room,
+          socketId: socket.id,
+          joinedAt: new Date().toISOString(),
+        },
+      };
+
+      await dynamoDB.put(params).promise();
+      console.log("User saved to DynamoDB");
+    } catch (err) {
+      console.error("Error saving user to DynamoDB:", err);
+    }
+
+    // Notify others in the room
+    io.to(room).emit("user:joined", { email, id: socket.id });
     io.to(socket.id).emit("room:join", data);
   });
 
@@ -39,7 +63,6 @@ io.on("connection", (socket) => {
     io.to(to).emit("peer:nego:final", { from: socket.id, ans });
   });
 });
-
 
 server.listen(3000, "0.0.0.0", () => {
   console.log("Server listening on port 3000");
