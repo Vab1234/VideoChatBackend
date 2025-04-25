@@ -2,6 +2,7 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient } = require("@aws-sdk/lib-dynamodb");
 
+console.log("AWS_ACCESS_KEY_ID", process.env.AWS_ACCESS_KEY_ID);
 const client = new DynamoDBClient({
   region: "eu-north-1", // e.g. "us-east-1"
   credentials: {

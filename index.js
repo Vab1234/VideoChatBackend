@@ -2,7 +2,7 @@ require("dotenv").config();
 const { Server } = require("socket.io");
 const http = require("http");
 const { PutCommand } = require("@aws-sdk/lib-dynamodb");
-const { dynamo } = require("./aws-config"); // Correctly imported DynamoDBDocumentClient
+const { dynamo } = require("./aws-config");
 
 const server = http.createServer();
 
@@ -18,15 +18,15 @@ io.on("connection", (socket) => {
 
   socket.on("room:join", async (data) => {
     const { email, room } = data;
-
+  
     emailToSocketIdMap.set(email, socket.id);
     socketidToEmailMap.set(socket.id, email);
     socket.join(room);
-
-    // Save user to DynamoDB
+  
+    // Save to DynamoDB
     try {
       const params = new PutCommand({
-        TableName: "Users", // Update if your DynamoDB table name is different
+        TableName: "Users",
         Item: {
           email,
           room,
@@ -34,17 +34,29 @@ io.on("connection", (socket) => {
           joinedAt: new Date().toISOString(),
         },
       });
-
+  
       await dynamo.send(params);
       console.log("User saved to DynamoDB");
     } catch (err) {
       console.error("Error saving user to DynamoDB:", err);
     }
-
-    // Notify others in the room
-    io.to(room).emit("user:joined", { email, id: socket.id });
+  
+    // Find the other user in the room
+    const clientsInRoom = Array.from(io.sockets.adapter.rooms.get(room) || []);
+    const otherClientId = clientsInRoom.find((id) => id !== socket.id);
+    const otherEmail = socketidToEmailMap.get(otherClientId);
+    console.log("otherClientId", otherEmail);
+  
+    // Notify only the other user
+    if (otherClientId) {
+      io.to(otherClientId).emit("user:joined", { email, id: socket.id });
+      io.to(socket.id).emit("user:joined", { email: otherEmail, id: otherClientId });
+    }
+  
+    // Optional: confirm to the joining user
     io.to(socket.id).emit("room:join", data);
   });
+  
 
   socket.on("user:call", ({ to, offer }) => {
     io.to(to).emit("incomming:call", { from: socket.id, offer });
